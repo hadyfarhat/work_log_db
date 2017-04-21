@@ -1,4 +1,5 @@
 import os
+import datetime
 
 from peewee import *
 
@@ -10,6 +11,7 @@ class Entry(Model):
     task_name = CharField(max_length=100)
     minutes = IntegerField(default=0)
     notes = CharField(max_length=200)
+    created_at = DateTimeField(defualt=datetime.datetime.now)
 
     class Meta:
         database = db
