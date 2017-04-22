@@ -1,5 +1,6 @@
 import os
 import datetime
+import sys
 
 from peewee import *
 
@@ -11,7 +12,7 @@ class Entry(Model):
     task_name = CharField(max_length=100)
     minutes = IntegerField(default=0)
     notes = CharField(max_length=200)
-    created_at = DateTimeField(defualt=datetime.datetime.now)
+    created_at = DateTimeField(default=datetime.datetime.now)
 
     class Meta:
         database = db
@@ -79,15 +80,18 @@ def menu_loop():
         menu_option = input("""
             1- New entry
             2- Find previous entry
+            3- Save and quit
 >>> """)
-        if menu_option in ["1", "2"]:
+        if menu_option in ["1", "2", "3"]:
             if menu_option == "1":
                 clear()
                 create_entry()
             elif menu_option == "2":
                 find_previous()
+            elif menu_option == "3":
+                sys.exit()
         else:
-            print("Enter a valid option [1, 2]")
+            print("Enter a valid option [1, 2, 3]")
             wait()
 
 
@@ -101,8 +105,11 @@ def create_entry():
                  task_name=task_name,
                  minutes=minutes,
                  notes=notes)
+    wait()
 
 
+# Find Previous Functions
+#---------------------------
 def find_previous():
     """find previous entries"""
     while True:
@@ -111,21 +118,32 @@ def find_previous():
             2- Find by date
             3- Find by time spent
             4- Find by search term
-            5- Return back to main menu
+            5- Find by date range
+            6- Return back to main menu
 >>> """)
-        if menu_option in ["1", "2", "3", "4", "5"]:
+        entry = ""
+        if menu_option in ["1", "2", "3", "4", "5", "6"]:
             if menu_option == "1":
-                find_by_employee()
+                entry = find_by_employee()
+            elif menu_option == "2":
+                entry = find_by_date()
+            elif menu_option == "3":
+                entry = find_by_time()
+            elif menu_option == "4":
+                entry = find_by_search_term()
             elif menu_option == "5":
+                entry = find_by_date_range()
+            elif menu_option == "6":
                 clear()
                 break
+
+            if entry:
+                edit_delete_entry(entry)
         else:
-            print("Enter a valid option [1, 2, 3, 4, 5]")
+            print("Enter a valid option [1, 2, 3, 4, 5, 6]")
             wait()
 
 
-# Find Previous Functions
-#---------------------------
 def find_by_employee():
     """find entry by employee name"""
     name = input("Enter employee name >>> ").strip()
@@ -135,21 +153,7 @@ def find_by_employee():
         if entries:
             entries_found = Entry.select().where(Entry.my_name == name)
             if entries_found:
-                entries_found = list(enumerate(entries_found))
-                while True:
-                    for entry in entries_found:
-                        display_entry(entry)
-                    menu_option = input("Select one of the above >>> ")
-                    try:
-                        menu_option = int(menu_option)
-                        if menu_option in range(len(entries_found)):
-                            clear()
-                            display_entry(entries_found[menu_option])
-                            wait()
-                            break
-                    except ValueError:
-                        print("Please enter a valid number")
-                        wait()
+                return get_entry_from_entries(entries_found)
         else:
             print("No entries were found")
             input("Press Enter to go back to main menu... ")
@@ -160,7 +164,252 @@ def find_by_employee():
         clear()
 
 
+def find_by_date():
+    """find entry based on user's input date format"""
+    while True:
+        date_format = input("Enter date in this "
+                            "format mm/dd/yyyy >>> ").strip()
+        try:
+            date = datetime.datetime.strptime(date_format, "%m/%d/%Y")
+            break
+        except ValueError:
+            print("Please enter a valid date in this form: mm/dd/yyyy")
+    entries_found = Entry.select().where(
+                            Entry.created_at.year == date.year,
+                            Entry.created_at.month == date.month,
+                            Entry.created_at.day == date.day)
+    if entries_found:
+        clear()
+        return get_entry_from_entries(entries_found)  
+    else:
+        print("No entries were found")
+        wait()
+
+
+def find_by_time():
+    """find entry based on number of minutes user has entered"""
+    while True:
+        minutes = input("Enter time spent of entry >>> ")
+        if minutes:
+            try:
+                minutes = int(minutes)
+                break
+            except ValueError:
+                print("Please enter a valid input. ex 12")
+                wait()
+        else:
+            print("Please enter a valid input. ex: 12")
+            wait()
+
+    if minutes:
+        entries_found = Entry.select().where(Entry.minutes == minutes)
+        if entries_found:
+            return get_entry_from_entries(entries_found)
+        else:
+            print("No entries were found based on your search")
+            wait()
+
+
+def find_by_search_term():
+    """find an entry based on a keyword found in notes or task_name"""
+    while True:
+        keyword = input("Enter search term >>> ")
+        if keyword:
+            entries_found = Entry.select().where(
+                                Entry.task_name.contains("%{}%".format(keyword)))
+            break
+        else:
+            print("Please enter a valid input")
+            wait()
+
+    if entries_found:
+        return get_entry_from_entries(entries_found)
+    else:
+        print("No entries were found based on your search")
+        wait()
+
+def find_by_date_range():
+    """find by date range For example between 01/01/2016 and 12/31/2016."""
+    # user should enter a valid date
+    # first date
+    while True:
+        first_date_format = input("Enter the first date mm/dd/yyyy >>> ")
+        try:
+            first_date = datetime.datetime.strptime(first_date_format,
+                                                    "%m/%d/%Y")
+            break
+        except ValueError:
+            print("Please enter a valid date")
+            print("Press Enter to continue")
+            clear()
+
+    # second date
+    while True:
+        second_date_format = input("Enter the second date mm/dd/yyyy >>> ")
+        try:
+            second_date = datetime.datetime.strptime(second_date_format,
+                                                     "%m/%d/%Y")
+            break
+        except ValueError:
+            print("Please enter a valid date")
+    
+    # calculate number of dates between first and second dates
+    days = (second_date - first_date).days
+    # array of all dates between the first and second dates
+    dates = []
+    for i in range(1, days+1):
+        dates.append(first_date + datetime.timedelta(days=i))
+
+    # for date in dates:
+    #     Entry.select().where(
+    #                         Entry.created_at.year == date.year,
+    #                         Entry.created_at.month == date.month,
+    #                         Entry.created_at.day == date.day)
+    entries_found = Entry.select().where(
+                            Entry.created_at.between(dates[0], dates[-1]))
+    if entries_found:
+        return get_entry_from_entries(entries_found)
+    else:
+        print("no entries were found based on your search")
+        wait()
+
+
+def get_entry_from_entries(entries_found):
+    """get an entry from a list of entries"""
+    entries_found = list(enumerate(entries_found))
+    while True:
+        for entry in entries_found:
+            display_entry(entry)
+        menu_option = input("Select one of the above >>> ")
+        try:
+            menu_option = int(menu_option)
+            if menu_option in range(len(entries_found)):
+                clear()
+                return entries_found[menu_option]
+        except ValueError:
+            print("Please enter a valid number")
+            wait()
+    
+
+# Editing Fucntions
+#---------------------------------------
+
+def edit_delete_entry(entry):
+    """choose whether to edit or delete an entry"""
+    while True:
+        display_entry(entry)
+        menu_option = input("""
+            1- Edit entry
+            2- Delete entry
+            3- Return back
+>>> """)
+        if menu_option in ["1", "2", "3"]:
+            if menu_option == "1":
+                clear()
+                edit_entry(entry)
+                break
+            elif menu_option == "2":
+                entry[1].delete_instance()
+                print("Entry deleted")
+                wait()
+                break
+            elif menu_option == "3":
+                break
+        else:
+            print("Please enter a valid option [1,2]")
+            wait()
+
+
+def edit_entry(entry):
+    """contains a menu of several editing options"""
+    while True:
+        display_entry(entry)
+        menu_option = input("""
+            1- Change date
+            2- Change task name
+            3- Change time spent
+            4- Change/Create notes
+            5- Return back
+>>> """)
+        if menu_option in ["1", "2", "3", "4", "5"]:
+            if menu_option == "1":
+                change_date(entry[1])
+            if menu_option == "2":
+                change_task_name(entry[1])
+            elif menu_option == "3":
+                change_time_spent(entry[1])
+            elif menu_option == "4":
+                change_notes(entry[1])
+            if menu_option == "5":
+                clear()
+                break
+        else:
+            print("Please enter a valid option [1,2,3,4,5]")
+
+
+def change_date(entry):
+    """let the user change the date of the passed entry"""
+    while True:
+        new_date_format = input("Enter your new date mm/dd/yyyy >>> ")
+        if new_date_format:
+            try:
+                new_date = datetime.datetime.strptime(new_date_format,
+                                                      "%m/%d/%Y")
+                entry.created_at = new_date
+                entry.save()
+                clear()
+                break
+            except ValueError:
+                print("Please enter a valid date format. ex 01/20/2013")
+        else:
+            print("Please enter an input. ex 01/20/2013")
+
+
+def change_task_name(entry):
+    while True:
+        new_task_name = input("Enter the new task name >>> ")
+        if new_task_name:
+            entry.task_name = new_task_name
+            entry.save()
+            clear()
+            break
+        else:
+            print("Please enter an input")
+
+
+def change_time_spent(entry):
+    while True:
+        new_time_spent = input("Enter the new time spent in minutes >>> ")
+        if new_time_spent:
+            try:
+                new_time_spent = int(new_time_spent)
+                entry.minutes = new_time_spent
+                entry.save()
+                clear()
+                break
+            except ValueError:
+                print("Please enter a valid input. ex: 12")
+        else:
+            print("Please enter an input")
+
+
+def change_notes(entry):
+    while True:
+        new_note = input("Enter the new note >>> ")
+        if new_note:
+            entry.notes = new_note
+            entry.save()
+            clear()
+            break
+        else:
+            print("Please enter an input")
+
+# helper functions
+#-----------------------------------
+
+
 def display_entry(entry):
+    """display entry in a good format"""
     print()
     print(entry[0])
     print("Employee name: {}".format(entry[1].my_name))
