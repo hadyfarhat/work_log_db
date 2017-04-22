@@ -216,7 +216,8 @@ def find_by_search_term():
         keyword = input("Enter search term >>> ")
         if keyword:
             entries_found = Entry.select().where(
-                                Entry.task_name.contains("%{}%".format(keyword)))
+                            (Entry.task_name.contains("%{}%".format(keyword)))
+                            | (Entry.notes.contains("%{}%".format(keyword))))
             break
         else:
             print("Please enter a valid input")
@@ -259,12 +260,6 @@ def find_by_date_range():
     dates = []
     for i in range(1, days+1):
         dates.append(first_date + datetime.timedelta(days=i))
-
-    # for date in dates:
-    #     Entry.select().where(
-    #                         Entry.created_at.year == date.year,
-    #                         Entry.created_at.month == date.month,
-    #                         Entry.created_at.day == date.day)
     entries_found = Entry.select().where(
                             Entry.created_at.between(dates[0], dates[-1]))
     if entries_found:
@@ -275,20 +270,30 @@ def find_by_date_range():
 
 
 def get_entry_from_entries(entries_found):
-    """get an entry from a list of entries"""
+    """go through entries(next/previous) and choose one."""
+    clear()
     entries_found = list(enumerate(entries_found))
+    count = 0
     while True:
-        for entry in entries_found:
-            display_entry(entry)
-        menu_option = input("Select one of the above >>> ")
-        try:
-            menu_option = int(menu_option)
-            if menu_option in range(len(entries_found)):
+        display_entry(entries_found[count])
+        entry = input("N: next. P: previous. Enter: choose entry >>> ")
+        if entry.lower() == "n":
+            if count == len(entries_found) - 1:
+                print("This is the last entry")
+                wait()
+            elif count < len(entries_found) -1:
+                count+=1
                 clear()
-                return entries_found[menu_option]
-        except ValueError:
-            print("Please enter a valid number")
-            wait()
+        elif entry.lower() == "p":
+            if count == 0:
+                print("This is the first entry")
+                wait()
+            elif count > 0:
+                count-=1
+                clear()
+        elif entry == "":
+            clear()
+            return entries_found[count]
     
 
 # Editing Fucntions
@@ -411,7 +416,8 @@ def change_notes(entry):
 def display_entry(entry):
     """display entry in a good format"""
     print()
-    print(entry[0])
+    print(str(entry[0]) + ")")
+    print()
     print("Employee name: {}".format(entry[1].my_name))
     print("Task Name: {}".format(entry[1].task_name))
     print("Time Spent (in minutes): {}".format(entry[1].minutes))
