@@ -70,7 +70,7 @@ def get_notes():
             return ""
 
 
-#------------------------------------------------
+# ###############################
 # menu functions below
 
 
@@ -109,7 +109,7 @@ def create_entry():
 
 
 # Find Previous Functions
-#---------------------------
+# ---------------------------
 def find_previous():
     """find previous entries"""
     while True:
@@ -180,7 +180,7 @@ def find_by_date():
                             Entry.created_at.day == date.day)
     if entries_found:
         clear()
-        return get_entry_from_entries(entries_found)  
+        return get_entry_from_entries(entries_found)
     else:
         print("No entries were found")
         wait()
@@ -229,6 +229,7 @@ def find_by_search_term():
         print("No entries were found based on your search")
         wait()
 
+
 def find_by_date_range():
     """find by date range For example between 01/01/2016 and 12/31/2016."""
     # user should enter a valid date
@@ -253,7 +254,7 @@ def find_by_date_range():
             break
         except ValueError:
             print("Please enter a valid date")
-    
+
     # calculate number of dates between first and second dates
     days = (second_date - first_date).days
     # array of all dates between the first and second dates
@@ -281,23 +282,23 @@ def get_entry_from_entries(entries_found):
             if count == len(entries_found) - 1:
                 print("This is the last entry")
                 wait()
-            elif count < len(entries_found) -1:
-                count+=1
+            elif count < len(entries_found) - 1:
+                count += 1
                 clear()
         elif entry.lower() == "p":
             if count == 0:
                 print("This is the first entry")
                 wait()
             elif count > 0:
-                count-=1
+                count -= 1
                 clear()
         elif entry == "":
             clear()
             return entries_found[count]
-    
+
 
 # Editing Fucntions
-#---------------------------------------
+# ---------------------------------------
 
 def edit_delete_entry(entry):
     """choose whether to edit or delete an entry"""
@@ -410,7 +411,7 @@ def change_notes(entry):
             print("Please enter an input")
 
 # helper functions
-#-----------------------------------
+# -----------------------------------
 
 
 def display_entry(entry):
@@ -442,12 +443,3 @@ if __name__ == "__main__":
     db.connect()
     db.create_tables([Entry], safe=True)
     menu_loop()
-
-
-
-
-
-
-
-
-
